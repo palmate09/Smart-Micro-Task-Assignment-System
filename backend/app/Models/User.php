@@ -41,6 +41,7 @@ class User extends Authenticatable
         'availability_status'
     ];
 
+
     /**
      * The attributes that should be hidden for serialization.
      *
@@ -51,16 +52,16 @@ class User extends Authenticatable
         'remember_token',
     ];
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
-    protected function casts(): array
-    {
-        return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-        ];
+
+    // skills that belongs to the user
+    public function skills() {
+        return $this->belongsToMany(
+            Skills::class, 
+            'user_skills', 
+            'user_id', 
+            'skill_id'
+        )
+        ->withPivot('proficiency')
+        ->withTimestamps();    
     }
 }

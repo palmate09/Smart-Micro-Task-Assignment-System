@@ -23,7 +23,7 @@ class UserApiTest extends TestCase
             'role' => $this->faker->randomElement(['admin', 'company']),
         ];
 
-        $response = $this->postJson('/api/register', $userData); 
+        $response = $this->postJson('/v1/api/register', $userData); 
 
         $response->assertStatus(201)
                  ->assertJsonStructure([
@@ -45,7 +45,7 @@ class UserApiTest extends TestCase
             'random_token' => Str::random(10)
         ]; 
 
-        $response = $this->postJson('/api/register', $userData); 
+        $response = $this->postJson('/v1/api/register', $userData); 
 
         $response->assertStatus(201)
                  ->assertJsonStructure([
