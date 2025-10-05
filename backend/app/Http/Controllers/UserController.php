@@ -7,30 +7,30 @@ use App\Models\User;
 use App\Enums\userType;  
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
+
 
 class UserController extends Controller
 {
     // shows all the users to the admin only 
-    public function index(string $admin_id) {
+    public function index(Request $request) {
 
         try{
-            $userData = User::find($admin_id); 
+            $authUser = $request->user();
 
-            if(!$userData || empty($userData)){
+            if (!$authUser || $authUser->role != 'admin') {
                 return response()->json([
-                    'message' => 'User not found!'
-                ], 404); 
+                    'message' => 'Only admin can see the users details'
+                ], 403);
             }
 
-            if($userData->role === userType::admin){
-                $users = User::all(); 
+            $users = User::all();
 
-                return response()->json([
-                    'users' => $users, 
-                    'message' => 'users data found successfully!'
-                ], 200); 
-            }
+            return response()->json([
+                'users' => $users,
+                'message' => 'Users data found successfully!'
+            ], 200);
         }
         catch(\Exception $e){
             return response()->json([
@@ -41,19 +41,24 @@ class UserController extends Controller
     }
 
     /**
-     * Store a newly created resource in storage.
+     * Store a newly created user in storage. or register the user
      */
-    public function store(Request $request)
-    {
+    public function store(Request $request) {
         try{
 
+            //Normalize role input
+            $request->merge([
+                'role' => $request->has('role') ? Str::lower(trim($request->input('role'))) : null,
+            ]);
+
             $validated = $request->validate([
-                'name' => 'required|string|max:256', 
-                'email' => 'required|string|email|unique:users, email', 
+                'name' => 'required|string|max:256',
+                'email' => 'required|string|email|unique:users,email',
                 'password' => 'required|string|min:6',
-                'role' => 'required|string|in:admin, user, worker', 
-                'rating' => 'nullable|numeric|min:0|max:5', 
-                'availability_status' => 'required|string|in:offline, busy, available'
+                'role' => ['required', 'string', Rule::in(['admin','company','worker'])],
+                // Only required if role is worker
+                'rating' => 'nullable|numeric|min:0|max:5|required_if:role,worker',
+                'availability_status' => 'nullable|string|in:offline,busy,available|required_if:role,worker',
             ]);
 
             $user = User::create([
@@ -61,9 +66,9 @@ class UserController extends Controller
                 'email' => $validated['email'],
                 'password' => $validated['password'], 
                 'role' => $validated['role'], 
-                'rating' => $validated['rating'], 
-                'availability_status' => $validated['availability_status']
-            ]); 
+                'rating' => $validated['rating'] ?? null, 
+                'availability_status' => $validated['availability_status'] ?? null
+            ]);  
 
             $token = $user->createToken('auth_token')->plainTextToken; 
 
@@ -83,26 +88,131 @@ class UserController extends Controller
     }
 
     /**
-     * Display the specified resource.
+     * Display the specific user's data .
      */
-    public function show(string $id)
-    {
-        //
+    public function show(string $id) {
+        if(!$id || empty($id)){
+            return response()->json([
+                'message'=> 'id not found'
+            ], 404); 
+        }
+
+        try{
+
+            $user = User::find($id); 
+
+            if(!$user || empty($user)){
+                return response()->json([
+                    'message' => 'user not found'
+                ], 404); 
+            }
+
+            return \response()->json([
+                'message' => 'user data found successfully!', 
+                'data' => $user
+            ], 200); 
+        }
+        catch(\Exception $e){
+            return response()->json([
+                'error' => 'Users show endpoint error', 
+                'message' => $e->getMessage()
+            ], 500); 
+        }
     }
 
     /**
-     * Update the specified resource in storage.
+     * Update the specific user's data.
      */
-    public function update(Request $request, string $id)
-    {
-        //
+    public function update(Request $request, string $id) {
+        
+        if(!$id || empty($id)){
+            return \response()->json([
+                'message' => 'id not found'
+            ], 404); 
+        }
+
+        try{
+
+            $user = User::find($id);
+            
+            if(!$user || empty($user)){
+                return response()->json([
+                    'message' => 'user not found'
+                ], 404); 
+            }
+
+            if($request->user()->id !== $user->id){
+                return \response()->json([
+                    'message' => 'Unauthorized'
+                ], 403);
+            }
+
+
+            $updatedValidation = $request->validate([
+                'name' => 'sometimes|string|max:256',
+                'email' => 'sometimes|string|email|unique:users,email',
+                'password' => 'sometimes|string|min:6',
+                'role' => ['sometimes', 'string', Rule::in(['admin','company','worker'])],
+                // Only required if role is worker
+                'rating' => 'nullable|numeric|min:0|max:5|required_if:role,worker',
+                'availability_status' => 'nullable|string|in:offline,busy,available|required_if:role,worker'
+            ]);
+            
+
+            foreach($updatedValidation as $key => $value){
+                if($request->has($key)) {
+                    $user->$key = $updatedValidation["$key"]; 
+                }
+                if($key === 'password' && $request->has('password')){
+                    $user->password = Hash::make($updatedValidation['password']);;  
+                }
+            }
+
+
+            return response()->json([
+                'message' => 'User data updated successfully!', 
+                'updated_user' => $user
+            ], 200); 
+        }
+        catch(\Exception $e){
+            return \response()->json([
+                'message' => $e->getMessage(), 
+                'error' => 'users update endpoint error'
+            ], 500);
+        }
     }
 
     /**
-     * Remove the specified resource from storage.
+     * Remove the specific user from the storage.
      */
-    public function destroy(string $id)
-    {
-        //
+    public function destroy(string $id) {
+        if(!$id || empty($id)){
+            return respnose()->json([
+                'message' => 'id not found'
+            ], 404); 
+        }
+
+        try{
+
+            $user = User::find($id); 
+
+            if(!$user || empty($user)){
+                return response()->json([
+                    'message' => 'User not found!'
+                ], 404); 
+            }
+
+            $user->delete(); 
+
+            return response()->json([
+                'message' => 'User deleted successfully!'
+            ], 200); 
+        }
+        catch(\Exception $e){
+            return response()->json([
+                'error' => 'Users destroy endpoint error', 
+                'message' => $e->getMessage()
+            ], 500); 
+        }
     }
 }

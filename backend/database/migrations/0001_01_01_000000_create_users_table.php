@@ -9,16 +9,16 @@ return new class extends Migration
     /**
      * Run the migrations.
      */
-    public function up(): void
-    {
+    public function up(): void {
         Schema::create('users', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->string('name');
             $table->string('email')->unique();
             $table->string('password');
             $table->enum('role', ['admin', 'company', 'worker']); 
-            $table->decimal('rating', 3, 2)->default(0); // avg rating (0.00 - 5.00)
-            $table->enum('availability_status', ['available', 'busy', 'offline'])->default('available'); 
+            $table->decimal('rating', 3, 2)->default(0)->nullable(); // avg rating (0.00 - 5.00)
+            $table->enum('availability_status', ['available', 'busy', 'offline'])->default('available')->nullable(); 
+            $table->timestamp('email_verified_at')->nullable(); // Add this line
             $table->rememberToken();
             $table->timestamps();
         });
@@ -28,14 +28,12 @@ return new class extends Migration
             $table->string('token');
             $table->timestamp('created_at')->nullable();
         });
-        
     }
 
     /**
      * Reverse the migrations.
      */
-    public function down(): void
-    {
+    public function down(): void {
         Schema::dropIfExists('users');
         Schema::dropIfExists('password_reset_tokens');
     }
