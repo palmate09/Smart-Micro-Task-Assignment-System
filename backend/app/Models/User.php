@@ -64,4 +64,17 @@ class User extends Authenticatable
         ->withPivot('proficiency')
         ->withTimestamps();    
     }
+
+    public function tasks() {
+        return $this->hasMany(Task::class, 'assigned_worker_id');
+    }
+
+    public function feedbacks() {
+        return $this->hasMany(TaskFeedback::class, 'worker_id');
+    }
+
+    public function useSkill()
+    {
+        return $this->hasMany(UserSkill::class);
+    }
 }

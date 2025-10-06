@@ -26,7 +26,8 @@ class UserSkill extends Model {
     protected $fillable = [
         'user_id', 
         'skill_id',
-        'proficiency'
+        'proficiency', 
+        'name'
     ]; 
 
     
@@ -37,6 +38,6 @@ class UserSkill extends Model {
 
     // A userSkills belogns to a skill 
     public function skills() {
-        return $this->belongsTo(Skills::class); 
+        return $this->belongsTo(Skills::class, 'skill_id'); 
     }
 }

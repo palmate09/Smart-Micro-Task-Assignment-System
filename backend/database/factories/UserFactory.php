@@ -30,6 +30,13 @@ class UserFactory extends Factory
         ];
     }
 
+     public function available(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'availability_status' => 'available',
+        ]);
+    }
+
     /**
      * Worker must fill every field
      */

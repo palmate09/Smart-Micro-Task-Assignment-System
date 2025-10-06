@@ -7,7 +7,9 @@ use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
 use Tests\TestCase;
-use App\Models\User; 
+use App\Models\User;
+use App\Models\Task;
+use App\Models\TaskFeedback;   
 use Illuminate\Support\Facades\DB;
 
 
@@ -32,7 +34,6 @@ class UserApiTest extends TestCase
                     'token'
                  ]); 
     }
-
     // test for login user endpoint 
     public function test_worker_must_register_with_rating_and_availability_status(): void {
         $userData = [
@@ -218,4 +219,90 @@ class UserApiTest extends TestCase
 
         $response->assertStatus(500);
     }
+
+
+    public function test_it_lists_top_performers_workers(): void {
+        $admin = User::factory()->admin()->create();
+
+        $worker1 = User::factory()->worker()->create(['rating' => 4.9]);
+        $worker2 = User::factory()->worker()->create(['rating' => 4.7]);
+        $company = User::factory()->company()->create();
+
+        // Seed completed tasks
+        Task::create([
+            'title' => 'Task A',
+            'description' => 'desc',
+            'required_skills' => [],
+            'estimated_duration' => 2,
+            'deadline' => now()->addDays(2),
+            'status' => 'completed',
+            'assigned_worker_id' => $worker1->id,
+            'created_by' => $company->id,
+        ]);
+        Task::create([
+            'title' => 'Task B',
+            'description' => 'desc',
+            'required_skills' => [],
+            'estimated_duration' => 2,
+            'deadline' => now()->addDays(2),
+            'status' => 'completed',
+            'assigned_worker_id' => $worker1->id,
+            'created_by' => $company->id,
+        ]);
+        Task::create([
+            'title' => 'Task C',
+            'description' => 'desc',
+            'required_skills' => [],
+            'estimated_duration' => 2,
+            'deadline' => now()->addDays(2),
+            'status' => 'completed',
+            'assigned_worker_id' => $worker2->id,
+            'created_by' => $company->id,
+        ]);
+
+        // Feedbacks
+        TaskFeedback::create([
+            'task_id' => Task::create([
+                'title' => 'Task D',
+                'description' => 'desc',
+                'required_skills' => [],
+                'estimated_duration' => 2,
+                'deadline' => now()->addDays(2),
+                'status' => 'completed',
+                'assigned_worker_id' => $worker1->id,
+                'created_by' => $company->id,
+            ])->id,
+            'worker_id' => $worker1->id,
+            'rating' => 5.0,
+            'review' => 'Excellent'
+        ]);
+        TaskFeedback::create([
+            'task_id' => Task::create([
+                'title' => 'Task E',
+                'description' => 'desc',
+                'required_skills' => [],
+                'estimated_duration' => 2,
+                'deadline' => now()->addDays(2),
+                'status' => 'completed',
+                'assigned_worker_id' => $worker2->id,
+                'created_by' => $company->id,
+            ])->id,
+            'worker_id' => $worker2->id,
+            'rating' => 4.6,
+            'review' => 'Good'
+        ]);
+
+        $response = $this->actingAs($admin, 'sanctum')
+                         ->getJson('/api/workers/top-performers?limit=2');
+
+        $response->assertStatus(200);
+        $list = $response->json();
+        $this->assertIsArray($list);
+        $this->assertCount(2, $list);
+        $this->assertArrayHasKey('id', $list[0]);
+        $this->assertArrayHasKey('name', $list[0]);
+        $this->assertArrayHasKey('rating', $list[0]);
+        $this->assertArrayHasKey('tasks_completed', $list[0]);
+    }
+
 }
