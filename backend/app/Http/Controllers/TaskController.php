@@ -290,7 +290,7 @@ class TaskController extends Controller
 
                 // Calculate match scores
                 $scoredWorkers = $availableWorkers->map(function ($worker) use ($requiredSkills) {
-                    $workerSkills = $worker->userSkill->pluck('skill.name')->toArray() ?? [];
+                    $workerSkills = $worker->userSkill->pluck('name')->toArray() ?? [];
 
                     $matchedSkills = array_intersect($requiredSkills, $workerSkills);
                     $skillMatchPercent = count($requiredSkills)

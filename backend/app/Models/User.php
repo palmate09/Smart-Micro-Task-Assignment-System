@@ -73,8 +73,7 @@ class User extends Authenticatable
         return $this->hasMany(TaskFeedback::class, 'worker_id');
     }
 
-    public function useSkill()
-    {
+    public function userSkill() {
         return $this->hasMany(UserSkill::class);
     }
 }

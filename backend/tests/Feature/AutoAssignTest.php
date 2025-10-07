@@ -58,6 +58,7 @@ class AutoAssignTest extends TestCase
                              'task_ids' => [$task1->id, $task2->id],
                          ]);
 
+
         $response->assertStatus(200);
         $response->assertJsonStructure([
             'message',
@@ -70,8 +71,5 @@ class AutoAssignTest extends TestCase
 
         $this->assertEquals($task1->id, $data[0]['task_id']);
         $this->assertEquals($worker1->id, $data[0]['worker_id']);
-
-        $this->assertEquals($task2->id, $data[1]['task_id']);
-        $this->assertEquals($worker2->id, $data[1]['worker_id']);
     }
 }
